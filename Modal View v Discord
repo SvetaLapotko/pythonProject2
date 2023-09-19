@@ -1,0 +1,56 @@
+import discord
+from discord.ext import commands
+from discord.ui import Button, View, TextInput
+
+intents = discord.Intents.default()
+intents.typing = False
+intents.presences = False
+
+bot = commands.Bot(command_prefix='/', intents=intents)
+
+class MyModal(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TextInput(label="Name", custom_id="name", max_length=100))
+        self.add_item(TextInput(label="Description", custom_id="description", max_length=100))
+        self.add_item(Button(label="Submit", style=discord.ButtonStyle.primary, custom_id="submit"))
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        return interaction.user == self.bot.user
+
+    @discord.ui.button(label="Submit", style=discord.ButtonStyle.primary, custom_id="submit")
+    async def submit_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        name = self.get_item_by(custom_id="name").value
+        description = self.get_item_by(custom_id="description").value
+
+        embed = discord.Embed(title="Заполненная форма")
+        embed.add_field(name="Name", value=name, inline=False)
+        embed.add_field(name="Description", value=description, inline=False)
+
+        await interaction.response.send_message(embed=embed)
+        await interaction.message.delete()
+        self.stop()
+
+@bot.command()
+async def chirp(ctx):
+    modal = MyModal()
+    await modal.start(ctx)
+
+@bot.event
+async def on_ready():
+    print(f"We have logged in as {bot.user}")
+    await send_form()
+
+async def send_form():
+    guild_id = 1234567890  # Замените на фактический ID сервера
+    channel_id = 1234567890  # Замените на фактический ID канала
+
+    guild = bot.get_guild(guild_id)
+    channel = guild.get_channel(channel_id) if guild else None
+
+    if channel:
+        modal = MyModal()
+        await modal.start(channel)
+
+if __name__ == "__main__":
+    bot.run('TOKEN')
